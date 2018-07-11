@@ -381,11 +381,11 @@ COMMIT;
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `mydb`;
-INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`) VALUES (1, 'Buenos Aires', 1, 1, '12/12/2018', '100', '150', '170');
-INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`) VALUES (2, 'Santa Fe', 2, 2, '4/7/2018', '200', '250', '270');
-INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`) VALUES (3, 'Cordoba', 3, 3, '5/7/2018', '300', '350', '370');
-INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`) VALUES (4, 'Chubut', 4, 4, '6/72018', '400', '450', '470');
-INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`) VALUES (5, 'San Luis', 5, 5, '4/7/2018', '500', '550', '570');
+INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`,`Cant_Asientos_económica` ,`Cant_Asientos_business`,`Cant_Asientos_primera clase.`) VALUES (1, 'Buenos Aires', 1, 1, '12/12/2018', '100', '150', '170',250, 200, 100);
+INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`,`Cant_Asientos_económica` ,`Cant_Asientos_business`,`Cant_Asientos_primera clase.`) VALUES (2, 'Santa Fe', 2, 2, '4/7/2018', '200', '250', '270',250, 200, 100);
+INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`,`Cant_Asientos_económica` ,`Cant_Asientos_business`,`Cant_Asientos_primera clase.`) VALUES (3, 'Cordoba', 3, 3, '5/7/2018', '300', '350', '370',250, 200, 100);
+INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`,`Cant_Asientos_económica` ,`Cant_Asientos_business`,`Cant_Asientos_primera clase.`) VALUES (4, 'Chubut', 4, 4, '6/72018', '400', '450', '470',250, 200, 100);
+INSERT INTO `mydb`.`Vuelo` (`idVuelo`, `Origen`, `Destino`, `Avion`, `Fecha`, `Precio_economica`, `Precio_business`, `Precio_primeraClase`,`Cant_Asientos_económica` ,`Cant_Asientos_business`,`Cant_Asientos_primera clase.`) VALUES (5, 'San Luis', 5, 5, '4/7/2018', '500', '550', '570',250, 200, 100);
 
 COMMIT;
 
@@ -415,19 +415,24 @@ select new.Categoria into aux from Reserva;
 
 if aux = 'economica' then
 update Reserva 
-join  Reserva on Reserva.Vuelo_idVuelo = Vuelo.idVuelo
-set Costo =  Vuelo.Precio_economica ,
+join  Vuelo on Vuelo.idVuelo = Reserva.Vuelo_idVuelo
+set Reserva.Costo =  Vuelo.Precio_economica ,
+Vuelo.Cant_Asientos_económica = Vuelo.Cant_Asientos_económica - 1
 ;
 
 elseif aux = 'business' then
 update Reserva 
-join  Reserva on Reserva.Vuelo_idVuelo = Vuelo.idVuelo
-set Costo =  Vuelo.Precio_business;
+join  Vuelo on Vuelo.idVuelo = Reserva.Vuelo_idVuelo
+set Reserva.Costo =  Vuelo.Precio_business,
+Vuelo.Cant_Asientos_business = Vuelo.Cant_Asientos_business -1
+;
 
 elseif aux = 'primera clase' then
 update Reserva 
-join  Reserva on Reserva.Vuelo_idVuelo = Vuelo.idVuelo
-set Costo =  Vuelo.Precio_primeraClase;
+join  Vuelo on Vuelo.idVuelo = Reserva.Vuelo_idVuelo
+set Reserva.Costo =  Vuelo.Precio_primeraClase,
+Vuelo.`Cant_Asientos_primera clase.` = Vuelo.`Cant_Asientos_primera clase.` - 1
+;
 
 end if;
 END $$
@@ -437,26 +442,31 @@ select * from Vuelo;
 
 drop procedure if exists insertReserva;
 delimiter $$
-create procedure insertReserva (in id int, in costo int, in categoria varchar(40), in idCLIENTE int, in Fecha_y_hora varchar(40), in pago varchar(40), idVUELO int, out rta varchar(40))
+create procedure insertReserva (in id int, in categoria varchar(40), in idCLIENTE int, in Fecha_y_hora varchar(40), in pago varchar(40), idVUELO int, out rta varchar(40))
 begin
 
  declare aux varchar(40);
+	
+	
+ 
+ 
 
  select idReserva into aux
- from Reserva;
+ from Reserva
+ where Reserva.Categoria = categoria and Reserva.Cliente = idCLIENTE and  Reserva.Fecha_y_hora = Fecha_y_hora and 
+Reserva.Metodo_de_Pago = pago and Reserva.Vuelo_idVuelo = idVUELO;
+ 
+ 
 
- if aux = id then
+ if  aux is null then
 	set rta = 'La reserva ya existe';
         
  else
-	insert into Reserva(idReserva, Costo, Categoria, Cliente, Fecha_y_hora, Metodo_de_Pago, Vuelo_idVuelo) values (id, costo , categoria , idCLIENTE, Fecha_y_hora, pago , idVUELO);
+	insert into Reserva(idReserva, Costo, Categoria, Cliente, Fecha_y_hora, Metodo_de_Pago, Vuelo_idVuelo) values (id, null , categoria , idCLIENTE, Fecha_y_hora, pago , idVUELO);
 	set rta = 'Se inserto la reserva';
  end if;
  
  end $$
 delimiter ;
-call insertReserva(1, '1000', 'Economica', 1, '10-5-1980', 'Efectivo', 1, @rta);
+call insertReserva(1, 'Economica', 1, '10-5-1980', 'Efectivo', 1, @rta);
 select @rta;
-
-select * from Reserva;
-
